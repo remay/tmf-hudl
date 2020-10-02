@@ -1,3 +1,6 @@
 **.img
 **.zip
 **.dump
+**.bak
+mnt/
+bootanimation/tmp_working_dir/
