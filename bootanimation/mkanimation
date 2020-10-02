@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# Unpack the original boot amimation, overly the TMF Custom ROM logo and repack it
+# Format information here: https://android.googlesource.com/platform/frameworks/base/+/master/cmds/bootanimation/FORMAT.md 
+
+src="bootanimation-orig.zip"
+dst="bootanimation.zip"
+tdir="tmp_working_dir";
+logo="tmf-custom-rom.png";
+
+# Check we have a source file:
+if ! [ -f "${src}" ]
+then
+	echo "Missing input file for bootanimation - skipping" 1>&2
+	exit 1
+fi
+
+# Expand the original animation
+unzip -q $src -d $tdir
+
+# Overlay the logo onto the part1 PNGs.
+find "$tdir/part1" -name '*.png' -exec composite $logo -gravity south -geometry +0+10 "{}" "{}" \;
+
+# Optimally compress all the PNG images
+find "$tdir" -name '*.png' -exec zopflipng -m -y "{}" "{}" \;
+
+# Create the new animation ZIP file
+( cd $tdir ; zip -0qry -i \*.txt \*.png @ "../$dst" *.txt part* )
+
+# Tidy up
+# May want to comment this out and tidy up by hand, as the PNG compression step is **slow**
+rm -rf $tdir
+
+exit 0
