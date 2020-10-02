@@ -16,11 +16,11 @@ This repo hosts the information and tools to build and flash a custom ROM
 some of the Tesco customisations.
 
 For more details please read:
-01-README
-02-TOOLS
-03-BUILD
-04-INSTALL
-05-TODO
+- 01-README
+- 02-TOOLS
+- 03-BUILD
+- 04-INSTALL
+- 05-TODO
 
 If all you want is to download and install the TMF Custom ROM, then head to the
 releases https://github.com/remay/tmf-hudl/releases page and find eveything you
