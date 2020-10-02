@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# script to unpack teh stock Hudl image and apply the changes to make the
+# TMF Custom ROM
+
+# TODO Should do an initial check for the tool that we need:
+# wget, unzip, imgrepackrk, zip, composite, zopflipng
+
+# We need to run as root to keep permissions within the image file correct
+# Check we are running as root
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 1>&2
+   echo "Try re-running it as 'sudo $0'" 1>&2
+   exit 1
+fi
+
+version='0.2'
+stockimg='hudl.20140424.153851.stock.img'
+tmfimg="hudl.20140424.153851.TMF-Custom-${version}.img"
+sysimg="${tmfimg}.dump/Image/system.img"
+miscimg="${tmfimg}.dump/Image/misc.img"
+mnt='mnt'
+
+# Download and unpack the stock image, if needed
+[ -f "${stockimg}" ] || [ -f "${stockimg}.zip" ] || wget https://github.com/remay/tmf-hudl/releases/download/stock-rom-v1.0/hudl.20140424.153851.stock.img.zip || exit 1
+[ -f "${stockimg}" ] || unzip "${stockimg}.zip" || exit 1
+[ -d "${stockimg}.dump" ] || imgrepackerrk $stockimg || exit 1
+
+# Rename the unpacked folder to match our release version
+[ -d "${tmfimg}.dump" ] && echo "Directory ${tmfimg}.dump exists.  Remove it and try again." && exit 1
+mv "${stockimg}.dump" "${tmfimg}.dump"
+
+# Create a mount point and mount the system image so we can modify it
+mkdir -p $mnt && mount $sysimg $mnt
+
+# ** Remove the annoying boot jingle
+mv $mnt/media/boot.ogg $mnt/media/boot.ogg.nothanks
+
+# ** Install our custom bootanimation
+#    - extract the original bootanimation
+[ -f bootanimation/bootanimation-orig.zip ] || $mnt/media/bootanimation.zip bootanimation/bootanimation-orig.zip
+#    - create the new bootanimation
+[ -f bootanimation/bootanimation.zip ] || (cd bootanimation && mkanimation)
+#    - copy the new bootanimation back to the image
+cp bootanimation/bootanimation.zip $mnt/media/bootanimation.zip
+
+# ** Stop tht setup wizard from running
+cat SetupWizard/stop-wizard >> $mnt/etc/install-recovery.sh
+
+# ** Remove all non-functional apps
+rm $mnt/app/appupdater.apk        # Hudl App Updater - One of the sources of call to the defunct Tesco server
+rm $mnt/app/otaclient.apk         # Hudl OTA Client - Another source of calls to the defunct TEsco server
+rm $mnt/app/otaclient.odex
+rm $mnt/app/hudlsetup.apk         # Hudl setup - addd the extra Tesco Account setup pages after the startup Wizard
+rm $mnt/app/hudlsetup.odex
+rm $mnt/app/blinkboxmovies.apk    # BlinkBox Movies
+rm $mnt/app/blinkboxmusic.apk     # BlinkBox Music
+rm $mnt/app/blinkboxwidget.apk    # BlinkBox Widget
+rm $mnt/app/clubcardtv.apk        # Club Card TV
+rm $mnt/app/clubcardwidget.apk    # Club Card Widget
+rm $mnt/app/getstarted.apk        # Get Started App
+rm $mnt/app/grocery.apk           # Tesco Groceries
+rm $mnt/app/grocerywidget.apk     # Tesco Groceries Widget
+rm $mnt/app/storelocator.apk      # Tesco Store Locator
+rm $mnt/app/tescoaccountapp.apk   # Tesco Account App
+rm $mnt/app/tescodirectwidget.apk # Tesco Direct Widget
+rm $mnt/app/tescolauncher.apk     # Tesco App Launcher
+
+# ** Get rid of the [T] Tesco button from the navigation bar
+cp SystemUI/SystemUI.apk.new $mnt/apps/SystemUI.apk
+
+# unmount the system image and remove our mount point
+umount $mnt && rm -rf $mnt
+
+# create a misc.img that on first boot wipes userdata and cache and then reboots tp get us cleanly into the new
+# image
+rkmisc wipe_all $miscimg
+
+# Re-pack the monolithic image and zip it up
+imgrepackrk "${tmfimg}.dump"
+zip "${tmfimg}.zip" ${tmfimg}
+
+# TODO Make the flash drive image - hopefully we can mount the img file and poke the img files into it.
+
+# Tidy up (remove this if you want to make you own additional changes to the image
+rm -rf "${tmfimg}.dump"
