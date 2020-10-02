@@ -1,4 +1,4 @@
-# tmf-hudl
+# TMF Custom ROM for Hudl 1
 On June 26th, 2020, the certificate that backs connections to
 https://device.mobile.tesco.com/ expired.   This causes all Tesco provided
 updates for Hudl 1 to fail to be served from this back end.   On factory re-set
