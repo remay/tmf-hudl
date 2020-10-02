@@ -1,0 +1,7 @@
+SystemUI.apk.orig is the original APK from the stock Hudl image
+SystemUI.apk.new  is a modified  version that removed the [T] button
+
+Differences can be seen by decoding both using apktool (https://ibotpeaches.github.io/Apktool/)
+and comparing the decoded files.
+
+The modified layout remove references to the Tesco [T]
