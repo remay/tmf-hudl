@@ -16,13 +16,14 @@ fi
 
 version='0.2'
 stockimg='hudl.20140424.153851.stock.img'
-tmfimg="hudl.20140424.153851.TMF-Custom-${version}.img"
+stockimg_url='https://github.com/remay/tmf-hudl/releases/download/stock-rom-v1.0/hudl.20140424.153851.stock.img.zip'
+tmfimg="hudl.20140424.153851.TMF-Custom-v${version}.img"
 sysimg="${tmfimg}.dump/Image/system.img"
 miscimg="${tmfimg}.dump/Image/misc.img"
 mnt='mnt'
 
 # Download and unpack the stock image, if needed
-[ -f "${stockimg}" ] || [ -f "${stockimg}.zip" ] || wget --no-verbose --show-progress https://github.com/remay/tmf-hudl/releases/download/stock-rom-v1.0/hudl.20140424.153851.stock.img.zip || exit 1
+[ -f "${stockimg}" ] || [ -f "${stockimg}.zip" ] || wget --no-verbose --show-progress $stockimg_url || exit 1
 [ -f "${stockimg}" ] || unzip "${stockimg}.zip" || exit 1
 [ -d "${stockimg}.dump" ] || imgrepackerrk $stockimg || exit 1
 
@@ -76,14 +77,14 @@ umount -v $mnt && rm -rf $mnt
 # create a misc.img that on first boot wipes userdata and cache and then reboots tp get us cleanly into the new
 # image
 echo "Creating new misc.img"
-rkmisc wipe_all $miscimg
+rkmisc wipe_all $miscimg >/dev/null 2>&1
 
 # Re-pack the monolithic image and zip it up
 imgrepackerrk "${tmfimg}.dump"
-zip "${tmfimg}.zip" ${tmfimg}
+zip -dd -v "${tmfimg}.zip" ${tmfimg}
 
 # TODO Make the flash drive image - hopefully we can mount the img file and poke the img files into it.
 
 # Tidy up (remove this if you want to make you own additional changes to the image
-rm -rfv "${tmfimg}.dump"
-rm -v "${tmfimg}"
+#rm -rf "${tmfimg}.dump"
+#rm "${tmfimg}"
