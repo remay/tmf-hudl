@@ -1,0 +1,21 @@
+In the stock builds the setup wizzard does not complete due to an expired certificate on 
+the Tesco server at https://device.mobile.tesco.com/
+
+Ideally we'd modify the setup wizzard (part of the Settings.apk application) but
+unfortunately apktool won't re-build even an unmodified version of Settings.apk that
+it unpacks.  If anyone knows how to get apktool to play nicely then I'd like to change how
+the setup wizard is disabled, so please let me know.
+
+As we can't diretly disable the setup wizard by disabling it in the application's manifest
+we use the pm (package manager) tool to do this for us - but we need to issue the pm commands
+as root and only once the Android VM is up and running and able to accept commands.  To
+achive this we hijack the /etc/install-recovery.sh script that runs during boot and we set
+off the pm command running every 10 seconds until it is either successful or until we have been
+trying for about 5 minutes.
+
+The component that needs disabling is
+com.android.setting/.wizard.WizardRoot
+
+and the pm command is
+
+pm disable com.android.setting/.wizard.WizardRoot

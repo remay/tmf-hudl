@@ -1,0 +1,23 @@
+
+# Added by TMF Custom ROM to stop the setup wizard
+# Start a sub-shell that tries every 10 seconds to disable the startup wizard.
+# Stop after 5 minutes, or after succesfully disabling the wizard.
+(
+i=30
+while [ $(($i)) -gt 0 ]
+do
+        i=$(($i - 1))
+
+        result=`pm disable com.android.settings/.wizard.WizardRoot 2>&1`
+
+        # until the packager manager is initialised fully the pm command above returns:
+        # "Error: Could not access the Package Manager. Is the system running?"
+        # Once it's up and runnig (typically takes about a minute) it returns:
+        # "Component {com.android.settings/com.android.settings.wizard.WizardRoot} new state: disabled"
+
+        case $result in
+                Error*) sleep 10 ;;
+                *)      i=0 ;;
+        esac
+done
+) >/dev/null 2>&1 &
