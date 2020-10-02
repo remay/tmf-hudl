@@ -1,0 +1,27 @@
+====================================================================================
+Known Issues/Thigs still to be done
+====================================================================================
+
+- Remaining branding
+   - Really the launcher needs replacement as it still contains a few
+     customisations - especially the helping 'guidance' screens (child advice,
+     tesco button, how to add icons to the homepage, etc).  But these all only
+     appear once and are simple to dismiss.  The stock launcher is not actually
+     too bad.
+
+- Updates to remaining stock apps
+   - It would be good to provide updates to the stock apps, but when I try to do
+     this as part of the image I end up with an unstable system (and a
+     non-functioning Google Play Services).  Currently the stock version of the
+     play store and play services get updated, and then the rest of the apps can
+     be updated
+
+- Update or Remove Google+/Currents App
+   - The stock version (Google+) no longer works and the upgrade (Google Currents)
+     doesn't run on such an old Android version.  Either remove the app, or update
+     it to a version of Google Currents that does work (e.g. the version from the
+     Helios ROM)
+
+- Recover space from the system partition.  The System partition is only just over
+  50% full.  It should be possible to recover most of that space and change the
+  parameter map to give a bit more space to userdata.  BUt may not be worth the effort

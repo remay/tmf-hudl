@@ -1,0 +1,15 @@
+The build process is fairly straightforward.  Clone this repository, and then from the repo
+root directory run
+>$ sudo ./build
+
+Root permission is required to have enough priviledges to remove and correctly
+create file within the Android image. IN short it does the following:
+
+1. Downloads the stock image (if not already downloaded), and unpacks it
+2. Make modifications
+3. Re-packs the modified image
+
+The build script itself is well documented with the changes it makes.  Should
+you wish to apply additional changes they either add them to the build script,
+or comment out the final 'rm' in the build script and manually apply your
+changes to the files in the .dump directory before manually repacking the image.

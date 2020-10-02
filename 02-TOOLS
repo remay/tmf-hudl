@@ -1,0 +1,34 @@
+All development was done on a Linux (Ubuntu 18.04) box. Some (or all?) of these
+tools are may be available for other platforms.  Ensure that 1-4 are installed
+and available in your path
+
+(1) adb
+>$ sudo apt-get install android-sdk-platform-tools
+
+After installing add the following to /lib/udev/rules.d/51-android.rules if
+there is not an entry for these venodrs/products
+
+#Archos (Tesco Hudl - needed to allow adb to work without root permission)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0e79", ENV{adb_user}="yes"
+#Rockchip RK3188(Hudl in bootloader/flash mode - needed to allow rkflashtool to work without root permission)
+SUBSYSTEM=="usb", ATTR{idVendor}=="2207", ATTR{idProduct}=="310b", ENV{adb_user}="yes"
+
+(2) rkflashtool & rkmisc
+>$ sudo apt-get install rkflashtool
+
+(3) imgrepackerrk
+https://forum.xda-developers.com/showthread.php?t=2257331
+For packing and unpacking monolithic rockchip format .img files
+
+On 64-bit Ubuntu I needed to enable 32-bit apps with:
+>$ sudo dpkg --add-architecture i386
+>$ sudo apt-get install libc6-i386
+
+(4) Tools for generating the bootanimation (see bootanimation/mkanimation:
+zip & unzip: >$ sudo apt-get install zip unzip
+composite:   >$ sudo apt-get install imagemagick
+zopflipng:   >$ sudo apt-get install zopfli
+
+(5) apktool
+(not required, but useful for instpecting the contents of .apk files)
+https://ibotpeaches.github.io/Apktool/install/

@@ -1,0 +1,43 @@
+====================================================================================
+TMF Custom ROM (for Hudl 1, based on stock image: JDQ39.20140424.153851)
+====================================================================================
+
+Tesco Hudl 1 devices that are running the stock firmware (and most variants) can
+no longer complete the set-up Wizard due to a Tesco server having an expired
+certificate.  It appears that Tesco have no plans to change this situation.
+
+If you want to try to work around this without building /installing a Custom ROM
+then please try to follow the instructions that can be found here:
+https://rob.themayfamily.me.uk/hudl
+
+If you just want to install a pre-built version of this TMF Custom ROM, then head to
+the releases page of this repository and follow the instructions there.
+
+====================================================================================
+Changes from Stock Image
+====================================================================================
+
+This ROM removes the Tesco customisations, and works around the fact that the
+Tesco servers no longer respond correctly to requests from the Hudl - specifically
+this works around the problem that it is impossible (well, at best hard) to get
+past the setup wizard after factory resetting the device.
+
+This ROM is not Rooted ... it is intended to be as close to the Stock Hudl as
+possible, but minus the branding and bits that no longer work.
+
+Changes:
+- Disable annoying boot sound
+- Add TMF Custom ROM graphic to boot animation
+- Disable the startup wizard and other non-functional Tesco software
+- Remove Tesco "bloatware"
+- Remove Tesco [T] button from launcher button bar
+
+====================================================================================
+How to Build and Install
+====================================================================================
+
+see 03-BUILD and 04-Install to learn how to build the image and how to install it
+on your Hudl.
+
+WARNING: installing *will* wipe all your data.  Back up *all* personal data and apps
+that you want to keep before you start.
