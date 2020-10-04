@@ -71,6 +71,10 @@ rm -v $mnt/app/tescolauncher.apk     # Tesco App Launcher
 # ** Get rid of the [T] Tesco button from the navigation bar
 cp -v SystemUI/SystemUI.apk.new $mnt/app/SystemUI.apk
 
+# ** Put our build info into the build.properties file
+# Appears in the settings app: About Tablet -> Build  number field
+sed -i -e "s/ro.build.display.id=JDQ39.20140424.153851/ro.build.display.id=TMF Custom ROM v${version} JDQ39.20140424.153851/" $mnt/build.properties
+
 # unmount the system image and remove our mount point
 umount -v $mnt && rm -rf $mnt
 
@@ -86,5 +90,5 @@ zip -dd -v "${tmfimg}.zip" ${tmfimg}
 # TODO Make the flash drive image - hopefully we can mount the img file and poke the img files into it.
 
 # Tidy up (remove this if you want to make you own additional changes to the image
-#rm -rf "${tmfimg}.dump"
-#rm "${tmfimg}"
+rm -rf "${tmfimg}.dump"
+rm "${tmfimg}"
