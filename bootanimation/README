@@ -1,4 +1,6 @@
-Logo at https://logomakr.com/9MLRCq - saved here as tmf-custom-rom.png
+Logo at logomakr.com/7IdjJ0 - saved here as tmf-custom-rom.png
+The file downloaded from logomaker is 8-bit RGBA.  Remove the alpha channel with
+convert infile.png -alpha off outfile.png
 
 Run mkanimation in this directory to overlay the logo onto the second
 stage boot animation and create a new bootanimation.zip file that
