@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Create a .img file that can be burned to a flash drive and used
 # to flash the TMF Custom ROM to a Hudl
@@ -19,13 +19,15 @@ tcliso="Core-current.iso"
 tcliso_url="http://tinycorelinux.net/11.x/x86/release/${tcliso}"
 mntimg="mnt/img"
 mntiso="mnt/iso"
-tce_cache='"tce-cache'
+tce_cache="tce-cache"
 
 # Start by making an empty .img file.  cw750MB is plenty TODO: tune this down?
+echo "Creating empty file: ${imgfile}"
 dd if=/dev/zero of="${imgfile}" bs=1M count=750
 
 # Attach a loop device to the file
 loop_device=`losetup --show -f ${imgfile}`
+echo "${imgfile} attached to ${loop_device}"
 
 # to create the partitions programatically (rather than manually)
 # we're going to simulate the manual input to fdisk
@@ -33,6 +35,7 @@ loop_device=`losetup --show -f ${imgfile}`
 # document what we're doing in-line with the actual commands
 # Note that a blank line (commented as "default" will send a empty
 # line terminated with a newline to take the fdisk default.
+echo "Making the partion on ${imgfile}"
 sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk ${loop_device}
   o # clear the in memory partition table
   n # new partition
@@ -40,15 +43,18 @@ sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk ${loop_device}
   1 # partition number 1
     # default - start at beginning of disk
     # default, extend partition to end of disk
+  p # print the partition table
   w # write the partition table and quit
 EOF
 
 # Get the OS to use the new partition table
-partprove ${loop_device}
+echo "Updating the OS to use the new partition(s)"
+partprobe ${loop_device}
 
 # Format the imag as FAT32
 # The volume name "TMF-HUDL" is used by the syslinux boot process to wait until
 # the disk is mount and availble before finishing the boot process
+echo "Formatting the image as FAT32"
 mkfs.vfat -n TMF-HUDL "${loop_device}p1"
 
 # Make the mount points
@@ -65,25 +71,25 @@ mount -v ${loop_device}p1 ${mntimg}
 mount -v ${tcliso} ${mntiso}
 
 # Copy everything from the ISO to our flash image:
-cp -av ${mntiso} ${mntimg}
+cp -aTv "${mntiso}" "${mntimg}"
 
 # unmount the ISO and remove the mount point
-umount ${mntiso}
+umount -v ${mntiso}
 rm -rfv ${mntiso}
 
 # Modify the ISOLINUX from the ISO and replace with SYSLINUX
 mv -v "${mntimg}/boot/isolinux" "${mntimg}/boot/syslinux"
-rm -v "${mntimg}/boot/isolinux.bin"
-rm -v "${mntimg}/boot/isolinux.cfg"
-cp -v syslinux.cfg "${mntimg}/boot"
+rm -v "${mntimg}/boot/syslinux/isolinux.bin"
+rm -v "${mntimg}/boot/syslinux/isolinux.cfg"
+cp -v syslinux.cfg "${mntimg}/boot/syslinux"
 
 # Add our Tiny Core Linux extensions here:
 mkdir -pv ${mntimg}/tce/optional
-mkdir -pv ${mntimg}/tce/onboot
+mkdir -pv ${mntimg}/tce/ondemand
 mkdir -pv ${mntimg}/tce/tmf-flash
-touch ${mntimg}/onboot.lst
+touch ${mntimg}/tce/onboot.lst
 
-mkdir -p $tce_cache
+mkdir -pv $tce_cache
 for p in libffi glib2 udev-lib libusb usbutils
 do
 	if [ ! -f "${tce_cache}/${p}.tcz" ]
@@ -92,7 +98,7 @@ do
 		wget -P "${tce_cache}" "http://tinycorelinux.net/11.x/x86/tcz/${p}.tcz.dep"
 		wget -P "${tce_cache}" "http://tinycorelinux.net/11.x/x86/tcz/${p}.tcz.md5.txt"
 	fi
-	cp -v "${tce_cache}/${p}.*" "${mntimg}/tce/optional"
+	cp -v "${tce_cache}/${p}."* "${mntimg}/tce/optional"
 done
 
 echo "usbutils.tcz" >> "${mntimg}/tce/onboot.lst"
@@ -110,8 +116,12 @@ chown -cR root:root ${mntimg}
 # Unmount our device and remove the mount point
 umount -v ${loop_device}p1
 rm -rfv ${mntimg}
+rm -rfdv mnt
 
 # Install SYSLINUX and make bootable
 syslinux --directory /boot/syslinux --install "${loop_device}p1"
 
-# Done - we shoudl be able to push that onto a usb stick and boot from it
+# Unattach the loop device
+losetup -d ${loop_device}
+
+# Done - we should be able to push that onto a usb stick and boot from it
