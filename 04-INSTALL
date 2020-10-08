@@ -5,7 +5,7 @@ Hudl, depending on your choice of flashing tools.
 - unzip the file to get a *.img file
 - Flash the *.img file using 3rd party tools
 
-3rd part tools for flashing image files like this include
+3rd party tools for flashing image files like this include
 1. Windows: RK Batch Tool - https://androidmtk.com/download-rockchip-batch-tool
    (Needs the RockChip Drivers)
 2. Linux: RockChip upgrade_tool - http://opensource.rock-chips.com/wiki_Upgradetool
@@ -18,4 +18,15 @@ Burn the image to a USB drive (1GB or bigger drive) using
 Rufus (Windows) - https://rufus.ie/
 Etcher (Multi-platform) - https://www.balena.io/etcher/
 
-Put the USB drive into a USB port on you computer and boot from it, and follow the instruction to connect your Hudl and flash it.
+Put the USB drive into a USB port on you computer and boot from it, and follow
+ the instruction to connect your Hudl and flash it.
+
+(3) The partition images are left by build.sh in the
+hudl.20140424.153851.tmf-custom-vX.X.img.dump/Image directory and can be
+flashed with the ./tmf-flash.sh script (which is a wrapper around
+rkflashtool, and is also the script used by the bootable USB flash drive.
+Run
+
+  >$ ./tmf-flash -h
+
+to see the options available.
