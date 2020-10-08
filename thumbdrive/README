@@ -1,0 +1,4 @@
+Make a bootable tiny core linux image that can be burned to a
+flash drive using standard tools that when used to boot a
+computer will walk the user through flashing the custom
+ROM onto their Hudl
