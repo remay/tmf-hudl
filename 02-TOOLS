@@ -26,11 +26,15 @@ There are other tools available for flashing - see 04-INSTALL for more infomrati
 
   >$ sudo apt-get install rkflashtool
 
+(d) syslinux
+  Used when building the bootable flash disk image
+  
+  >$ sudo apt-get install syslinux
 
 (2) Tools to flash the image:
 -----------------------------
 
-(d) adb
+(a) adb
   Optional, but install includes the udev rules to allow access to the USB
   devices without needing root permissions so this is recomended.  If present
   it may be used by the tmf-flash.sh script to put the Hudl into bootloader
@@ -46,7 +50,7 @@ There are other tools available for flashing - see 04-INSTALL for more infomrati
   #Rockchip RK3188(Hudl in bootloader/flash mode - needed to allow rkflashtool to work without root permission)
   SUBSYSTEM=="usb", ATTR{idVendor}=="2207", ATTR{idProduct}=="310b", ENV{adb_user}="yes"
 
-(e) rkflashtool
+(b) rkflashtool
   used by tmf-flash.sh to actually flash the image to the device.  Can do 'partial'
   flashes e.g. only the system partition which is a good speed increase during
   development. Can also read teh flash back to your computer, useful for backup.
@@ -57,6 +61,6 @@ There are other tools available for flashing - see 04-INSTALL for more infomrati
 (2) Other tools
 ---------------
 
-(f) apktool
+(a) apktool
   useful for instpecting/modifying the contents of .apk files
   Follow the instructions at https://ibotpeaches.github.io/Apktool/install/
