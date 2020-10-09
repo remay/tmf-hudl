@@ -3,7 +3,7 @@
 # script to unpack teh stock Hudl image and apply the changes to make the
 # TMF Custom ROM
 
-# TODO Should do an initial check for the tool that we need:
+# TODO Should do an initial check for the tools that we need:
 # wget, unzip, imgrepackrk, zip, composite, zopflipng
 
 # We need to run as root to keep permissions within the image file correct
@@ -87,7 +87,10 @@ rkmisc wipe_all $miscimg >/dev/null 2>&1
 imgrepackerrk "${tmfimg}.dump"
 zip -dd -v "${tmfimg}.zip" ${tmfimg}
 
-# TODO Make the flash drive image - hopefully we can mount the img file and poke the img files into it.
+# Make the flash drive image, if needed
+[ -f thubmdrive/tmf-hudl-thumb-drive.img ] || ( cd thumbdrive; ./mkthumbdrive.sh )
+
+# Make a copy of the thumbdrive amd push the image parts and flash program into it
 
 # Tidy up (remove this if you want to make you own additional changes to the image
 rm -rf "${tmfimg}.dump"

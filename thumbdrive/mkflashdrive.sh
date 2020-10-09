@@ -115,9 +115,12 @@ cp -v "rktools.tcz" "${mntimg}/tce/optional"
 echo "libusb.tcz" >> "${mntimg}/tce/optional/rktools.tcz.dep"
 echo "rktools.tcz" >> "${mntimg}/tce/onboot.lst"
 
-# TODO tmf-flash.sh and images are added by the build process
+# tmf-flash.sh and images are added ito /tce/tmf-flash by the build process
+# write a dummy tmf-flash.sh to report the error if anyone run=s this image
+cp -v "tmf-flash.sh" "${mntimg}/tce/tmf-flash"
 
-# TODO add a data.tgz file that overwrites something to launch tmf-flash.sh
+# Add a data.tgz file that overwrites the tc user's ~/.profile to start teh tmf-flash.sh script automatically
+cp -v "mydata.tgz" "${mntimg}/tce"
 
 # Fix ownerships
 chown -cR root:root ${mntimg}
