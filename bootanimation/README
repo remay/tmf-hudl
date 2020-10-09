@@ -8,3 +8,6 @@ Run mkanimation in this directory to overlay the logo onto the second
 stage boot animation and create a new bootanimation.zip file that
 can be used to replace the (/system)/media/bootanimation.zip
 file in system.img
+
+TODO - we should have an option to skip the (very slow) compression so that
+we can have a fast turn around during development
