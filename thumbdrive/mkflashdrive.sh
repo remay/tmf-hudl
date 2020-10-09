@@ -7,6 +7,8 @@
 # process we inject the custom ROM and the flashing program into
 # this disk.
 
+# TODO should have options to clean up the build artefacts
+
 # Needs to be run as root so we are allowed to mount and set other permissions
 if [[ $EUID -ne 0 ]]; then
    echo "This script must be run as root" 1>&2
@@ -21,9 +23,11 @@ mntimg="mnt/img"
 mntiso="mnt/iso"
 tce_cache="tce-cache"
 
-# Start by making an empty .img file.  cw750MB is plenty TODO: tune this down?
+# Start by making an empty .img file.  cw750MB is plenty TODO: tune this down
+# creating this as a sparse file saves time and disk space
 echo "Creating empty file: ${imgfile}"
-dd if=/dev/zero of="${imgfile}" bs=1M count=750
+#dd if=/dev/zero of="${imgfile}" bs=1M count=750 status=none
+dd if=/dev/zero of="${imgfile}" bs=1 count=0 seek=750M status=none
 
 # Attach a loop device to the file
 loop_device=`losetup --show -f ${imgfile}`
@@ -36,15 +40,18 @@ echo "${imgfile} attached to ${loop_device}"
 # Note that a blank line (commented as "default" will send a empty
 # line terminated with a newline to take the fdisk default.
 echo "Making the partion on ${imgfile}"
-sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk ${loop_device}
+sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk ${loop_device} >/dev/null
   o # clear the in memory partition table
   n # new partition
   p # primary partition
   1 # partition number 1
     # default - start at beginning of disk
     # default, extend partition to end of disk
-  p # print the partition table
+  t # set the type of the new partition
+  c # set teh tpe to 0xC (Win95 FAT32 (LBA))
+  a # Mark the partitionas bootable
   w # write the partition table and quit
+  q # quit
 EOF
 
 # Get the OS to use the new partition table
@@ -71,6 +78,7 @@ mount -v ${loop_device}p1 ${mntimg}
 mount -v ${tcliso} ${mntiso}
 
 # Copy everything from the ISO to our flash image:
+# TODO: Perhaps we shoudl only copy what we actually want?
 cp -aTv "${mntiso}" "${mntimg}"
 
 # unmount the ISO and remove the mount point
@@ -80,6 +88,7 @@ rm -rfv ${mntiso}
 # Modify the ISOLINUX from the ISO and replace with SYSLINUX
 mv -v "${mntimg}/boot/isolinux" "${mntimg}/boot/syslinux"
 rm -v "${mntimg}/boot/syslinux/isolinux.bin"
+rm -v "${mntimg}/boot/syslinux/boot.cat"
 rm -v "${mntimg}/boot/syslinux/isolinux.cfg"
 cp -v syslinux.cfg "${mntimg}/boot/syslinux"
 
@@ -94,9 +103,9 @@ for p in libffi glib2 udev-lib libusb usbutils
 do
 	if [ ! -f "${tce_cache}/${p}.tcz" ]
 	then
-		wget -P "${tce_cache}" "http://tinycorelinux.net/11.x/x86/tcz/${p}.tcz"
-		wget -P "${tce_cache}" "http://tinycorelinux.net/11.x/x86/tcz/${p}.tcz.dep"
-		wget -P "${tce_cache}" "http://tinycorelinux.net/11.x/x86/tcz/${p}.tcz.md5.txt"
+		wget -P "${tce_cache}" --no-verbose --show-progress "http://tinycorelinux.net/11.x/x86/tcz/${p}.tcz"
+		wget -P "${tce_cache}" --no-verbose --show-progress "http://tinycorelinux.net/11.x/x86/tcz/${p}.tcz.dep"
+		wget -P "${tce_cache}" --no-verbose --show-progress "http://tinycorelinux.net/11.x/x86/tcz/${p}.tcz.md5.txt"
 	fi
 	cp -v "${tce_cache}/${p}."* "${mntimg}/tce/optional"
 done
@@ -116,10 +125,13 @@ chown -cR root:root ${mntimg}
 # Unmount our device and remove the mount point
 umount -v ${loop_device}p1
 rm -rfv ${mntimg}
-rm -rfdv mnt
+rm -fdv mnt
 
-# Install SYSLINUX and make bootable
+echo "Making the image bootable"
+# Install SYSLINUX
 syslinux --directory /boot/syslinux --install "${loop_device}p1"
+# Install MBR
+dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/mbr.bin of="${loop_device}" status=none
 
 # Unattach the loop device
 losetup -d ${loop_device}
