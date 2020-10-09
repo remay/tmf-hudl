@@ -98,13 +98,13 @@ loop_device=`losetup --show -f "tmf-hudl-thumbdrive-v${version}.img"`
 mkdir -pv "${mnt}" && mount -v "${loop_device}p1" "${mnt}"
 
 # Copy compressed partition images to the thumbdrive
-gzip -c9 "${tmfimg}.dump/parameter"              >"${mnt}/tce/tmf-flash/parameter.gz"
-gzip -c9 "${tmfimg}.dump/Image/boot.img"         >"${mnt}/tce/tmf-flash/boot.img.gz"
-gzip -c9 "${tmfimg}.dump/Image/recovery.img"     >"${mnt}/tce/tmf-flash/recovery.img.gz"
-gzip -c9 "${tmfimg}.dump/Image/kernel.img"       >"${mnt}/tce/tmf-flash/kernel.img.gz"
-gzip -c9 "${tmfimg}.dump/Image/system.img"       >"${mnt}/tce/tmf-flash/system.img.gz"
-gzip -c9 "${tmfimg}.dump/Image/misc.img"         >"${mnt}/tce/tmf-flash/misc.img.gz"
-gzip -c9 "${tmfimg}.dump/backupimage/backup.img" >"${mnt}/tce/tmf-flash/backup.img.gz"
+gzip -cv9 "${tmfimg}.dump/parameter"              >"${mnt}/tce/tmf-flash/parameter.gz"
+gzip -cv9 "${tmfimg}.dump/Image/boot.img"         >"${mnt}/tce/tmf-flash/boot.img.gz"
+gzip -cv9 "${tmfimg}.dump/Image/recovery.img"     >"${mnt}/tce/tmf-flash/recovery.img.gz"
+gzip -cv9 "${tmfimg}.dump/Image/kernel.img"       >"${mnt}/tce/tmf-flash/kernel.img.gz"
+gzip -cv9 "${tmfimg}.dump/Image/system.img"       >"${mnt}/tce/tmf-flash/system.img.gz"
+gzip -cv9 "${tmfimg}.dump/Image/misc.img"         >"${mnt}/tce/tmf-flash/misc.img.gz"
+gzip -cv9 "${tmfimg}.dump/backupimage/backup.img" >"${mnt}/tce/tmf-flash/backup.img.gz"
 cp -v tmf-flash.sh "${mnt}/tce/tmf-flash"
 
 # unmount the thumbdrive image and remove our mount point
