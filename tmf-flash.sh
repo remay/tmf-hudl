@@ -6,17 +6,13 @@
 # tmf-flash.sh v0.1
 ############################################################
 TCEDIR=`readlink /etc/sysconfig/tcedir`
-IMGDIR="${TCEDIR}/image"
+IMGDIR="${TCEDIR}/tmf-hudl"
 
 # ANSI COLORS
-CRE="$(echo -e '\r\033[K')"
 RED="$(echo -e '\033[1;31m')"
 GREEN="$(echo -e '\033[1;32m')"
 YELLOW="$(echo -e '\033[1;33m')"
-BLUE="$(echo -e '\033[1;34m')"
 MAGENTA="$(echo -e '\033[1;35m')"
-CYAN="$(echo -e '\033[1;36m')"
-WHITE="$(echo -e '\033[1;37m')"
 NORMAL="$(echo -e '\033[0;39m')"
 
 clear
