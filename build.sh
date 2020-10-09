@@ -88,10 +88,32 @@ imgrepackerrk "${tmfimg}.dump"
 zip -dd -v "${tmfimg}.zip" ${tmfimg}
 
 # Make the flash drive image, if needed
-[ -f thubmdrive/tmf-hudl-thumb-drive.img ] || ( cd thumbdrive; ./mkthumbdrive.sh )
+[ -f thumbdrive/tmf-hudl-thumb-drive.img ] || ( cd thumbdrive; ./mkflashdrive.sh )
 
 # Make a copy of the thumbdrive amd push the image parts and flash program into it
+cp -v thumbdrive/tmf-hudl-thumb-drive.img "tmf-hudl-thumbdrive-v${version}.img"
+
+# Create a mount point and mount the thumbdrive image so we can modify it
+loop_device=`losetup --show -f "tmf-hudl-thumbdrive-v${version}.img"`
+mkdir -pv "${mnt}" && mount -v "${loop_device}p1" "${mnt}"
+
+# Copy compressed partition images to the thumbdrive
+gzip -c9 "${tmfimg}.dump/parameter"              >"${mnt}/tce/tmf-flash/parameter.gz"
+gzip -c9 "${tmfimg}.dump/Image/boot.img"         >"${mnt}/tce/tmf-flash/boot.img.gz"
+gzip -c9 "${tmfimg}.dump/Image/recovery.img"     >"${mnt}/tce/tmf-flash/recovery.img.gz"
+gzip -c9 "${tmfimg}.dump/Image/kernel.img"       >"${mnt}/tce/tmf-flash/kernel.img.gz"
+gzip -c9 "${tmfimg}.dump/Image/system.img"       >"${mnt}/tce/tmf-flash/system.img.gz"
+gzip -c9 "${tmfimg}.dump/Image/misc.img"         >"${mnt}/tce/tmf-flash/misc.img.gz"
+gzip -c9 "${tmfimg}.dump/backupimage/backup.img" >"${mnt}/tce/tmf-flash/backup.img.gz"
+cp -v tmf-flash.sh "${mnt}/tce/tmf-flash"
+
+# unmount the thumbdrive image and remove our mount point
+umount -v $mnt && rm -rf $mnt
+losetup -d ${loop_device}
+
+# zip up the thumbdrive img file
+zip -dd -v "tmf-hudl-thumbdrive-v${version}.zip" "tmf-hudl-thumbdrive-v${version}.img"
 
 # Tidy up (remove this if you want to make you own additional changes to the image
-rm -rf "${tmfimg}.dump"
-rm "${tmfimg}"
+#rm -rf "${tmfimg}.dump"
+#rm "${tmfimg}"
