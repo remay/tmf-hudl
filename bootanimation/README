@@ -1,5 +1,6 @@
 Logo at logomakr.com/7IdjJ0 - saved here as tmf-custom-rom.png
 Created my free logo at LogoMakr.com
+(White background: https://logomakr.com/55e8cc)
 
 The file downloaded from logomaker is 8-bit RGBA.  Remove the alpha channel with
 convert infile.png -alpha off outfile.png
