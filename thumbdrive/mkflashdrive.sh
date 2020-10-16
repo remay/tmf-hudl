@@ -23,11 +23,11 @@ mntimg="mnt/img"
 mntiso="mnt/iso"
 tce_cache="tce-cache"
 
-# Start by making an empty .img file.  cw750MB is plenty TODO: tune this down
+# Start by making an empty .img file.  600MB is plenty TODO: tune this down
 # creating this as a sparse file saves time and disk space
 echo "Creating empty file: ${imgfile}"
-#dd if=/dev/zero of="${imgfile}" bs=1M count=750 status=none
-dd if=/dev/zero of="${imgfile}" bs=1 count=0 seek=750M status=none
+#dd if=/dev/zero of="${imgfile}" bs=1M count=600 status=none
+dd if=/dev/zero of="${imgfile}" bs=1 count=0 seek=600M status=none
 
 # Attach a loop device to the file
 loop_device=`losetup --show -f ${imgfile}`
