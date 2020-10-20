@@ -18,14 +18,19 @@ usage()
 
     printf "\t-h --help\tPrint this help\n"
     printf "\t-d --dry-run\tdon't need a device connected or actually flash\n"
-    printf "\t-f --force\tDon't preint all the verbose questions or require answers to proceed\n"
-    printf "\t-s --short\tonly flash the system and misc partitions\n\n"
+    printf "\t-f --force\tDon't print all the verbose information or require answers to proceed\n"
+    printf "\t-p --partial\tonly flash the system and misc partitions\n\n"
 
-    printf "<img-dir> is the directory that will be searched for image files that will be\n"
-    printf "searched for xxx.img files to flash to the Hudl.  xxx is one or more of:\n"
+    printf "<img-dir> is the directory that will be searched for image files of the form\n"
+    printf "xxx.img.  xxx is one or more of:\n"
     printf "boot recovery kernel system misc backup\n\n"
 }
 
+if [ $# -lt 1 ] ; then
+    printf "ERROR: missing mandatory command line option. (Got $# expected 1).\n"
+    usage
+    exit 1
+fi
 while [ "$1" != "" ]; do
     PARAM=`echo $1 | awk -F= '{print $1}'`
     VALUE=`echo $1 | awk -F= '{print $2}'`
