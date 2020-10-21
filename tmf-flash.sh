@@ -206,7 +206,7 @@ for p in $partitions ; do
 
     # Find the right image file
     # FIXME: next line can return more than one match
-    file=`find "${imgdir}" -name "${p}.img*" -print`
+    file=`find "${imgdir}" -name "${p}.img" -print -o -name "${p}.img.gz" -print`
     ext=${file##*.}
     if [ $dry_run -ne 1 ] ; then
         if [ "${ext}" = "gz" ] ; then
