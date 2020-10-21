@@ -276,14 +276,5 @@ if [ $force -ne 1 ] ; then
     printf "${YELLOW}Press <Enter> to finish: ${NORMAL}"
     read answer
 fi
-# TODO set imgdir on the commandline from the enclosing script
-#TCEDIR=`readlink /etc/sysconfig/tcedir`
-#IMGDIR="${TCEDIR}/tmf-flash"
 
-
-# Move this to the enclosing shell TODO
-#echo
-#echo "${GREEN}This macine will now shut down.  Once the screen goes${NORMAL}"
-#echo "${GREEN}blank it is safe to remove your USB drive.${NORMAL}"
-
-#sudo poweroff
+exit
