@@ -1,6 +1,9 @@
 All development was done on a Linux (Ubuntu 18.04) box. Some (or all?) of these
-tools are may be available for other platforms.  If you are building then Ensure
+tools are may be available for other platforms.  If you are building then ensure
 that the build tools are available on your path.
+
+If you are not building the custom ROM (but just installing it) then you don't
+ need to read any more of this file.
 
 There are other tools available for flashing - see 04-INSTALL for more infomration.
 

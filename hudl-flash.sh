@@ -22,8 +22,8 @@ usage()
     printf "\t-p --partial\tonly flash the system and misc partitions\n\n"
 
     printf "<img-dir> is the directory that will be searched for image files of the form\n"
-    printf "xxx.img.  xxx is one or more of:\n"
-    printf "boot recovery kernel system misc backup\n\n"
+    printf "          xxx.img.  xxx is one or more of:\n"
+    printf "          boot recovery kernel system misc backup\n\n"
 }
 
 if [ $# -lt 1 ] ; then

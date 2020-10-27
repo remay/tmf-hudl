@@ -23,10 +23,10 @@ Put the USB drive into a USB port on you computer and boot from it, and follow
 
 (3) The partition images are left by build.sh in the
 hudl.20140424.153851.tmf-custom-vX.X.img.dump/Image directory and can be
-flashed with the ./tmf-flash.sh script (which is a wrapper around
+flashed with the ./hudl-flash.sh script (which is a wrapper around
 rkflashtool, and is also the script used by the bootable USB flash drive.
 Run
 
-  >$ ./tmf-flash -h
+  >$ ./hudl-flash -h
 
 to see the options available.
