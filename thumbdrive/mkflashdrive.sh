@@ -95,7 +95,6 @@ cp -v syslinux.cfg "${mntimg}/boot/syslinux"
 # Add our Tiny Core Linux extensions here:
 mkdir -pv ${mntimg}/tce/optional
 mkdir -pv ${mntimg}/tce/ondemand
-mkdir -pv ${mntimg}/tce/tmf-flash
 touch ${mntimg}/tce/onboot.lst
 
 mkdir -pv $tce_cache
@@ -115,11 +114,13 @@ cp -v "rktools.tcz" "${mntimg}/tce/optional"
 echo "libusb.tcz" >> "${mntimg}/tce/optional/rktools.tcz.dep"
 echo "rktools.tcz" >> "${mntimg}/tce/onboot.lst"
 
-# tmf-flash.sh and images are added ito /tce/tmf-flash by the build process
-# write a dummy tmf-flash.sh to report the error if anyone run=s this image
-cp -v "tmf-flash.sh" "${mntimg}/tce/tmf-flash"
+# hudl-flash.sh and images are added to /tce/tmf-hudl by the build process
+# write a dummy hudl-flash.sh to report the error if anyone runs this image
+mkdir -pv "${mntimg}/tce/tmf-hudl"
+cp -v "hudl-flash.skel.sh" "${mntimg}/tce/tmf-hudl/hudl-flash.sh"
 
-# Add a data.tgz file that overwrites the tc user's ~/.profile to start teh tmf-flash.sh script automatically
+# Add a data.tgz file that overwrites the tc user's ~/.profile to start the hudl-flash.sh script automatically
+# TODO: would be good to build this from scratch to get paths to match what's done in this script
 cp -v "mydata.tgz" "${mntimg}/tce"
 
 # Fix ownerships
