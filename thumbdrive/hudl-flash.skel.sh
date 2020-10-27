@@ -6,6 +6,7 @@
 # ANSI COLORS
 RED="$(printf '\033[1;31m')"
 YELLOW="$(printf '\033[1;33m')"
+NORMAL="$(printf '\033[0;39m')"
 
 clear
 printf "${RED}############################################################${NORMAL}\n"
@@ -19,6 +20,5 @@ printf "${RED}image that has not been correctly configured.${NORMAL}\n\n"
 printf "${RED}You should download the correct image to flash your USB drive${NORMAL}\n"
 printf "${RED}from https://github.com/remay/tmf-hudl/releases${NORMAL}\n\n"
 
-printf "${YELLOW}Press <enter> and wait from your computer to turn off before${NORMAL}\n"
-printf "${YELLOW}you remove your USB drive.${NORMAL}"
+printf "${YELLOW}Press <enter> to end:${NORMAL}"
 read junk
