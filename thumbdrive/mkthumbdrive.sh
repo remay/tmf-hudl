@@ -1,37 +1,72 @@
 #!/bin/bash
 
-# Create a .img file that can be burned to a flash drive and used
-# to flash the TMF Custom ROM to a Hudl
+# Create a .img file that can be burned to a USB flash drive and used
+# to boot a computer and run a program to flash the TMF Custom ROM to a Hudl
 
 # Here we make the skeleton that we need, and then during the build
 # process we inject the custom ROM and the flashing program into
 # this disk.
 
-# TODO should have options to clean up the build artefacts
+force=0
+
+usage()
+{
+    printf "\n"
+    printf "$0 <res-dir> <cache-dir> <mnt-dir>\n\n"
+
+    printf "<res-dir>    is the directory where the build resources are found\n"
+    printf "<cache-dir>  is the directory where the build artefacts are stored\n"
+    printf "<mnt-dir>    is the directory used to create two temporary mount points while building the image\n\n"
+}
+
+if [ $# -ne 3 ] ; then
+    printf "ERROR: missing mandatory command line option. (Got $# expected 3).\n"
+    usage
+    exit 1
+fi
+
+respath=$1
+cachepath=$2
+mnt=$3
+
+if ! [ -d "${respath}" ]
+then
+        printf "ERROR: \"${respath}\" is not a directory\n"
+        exit 1
+fi
+if ! [ -d "${cachepath}" ]
+then
+        printf "ERROR: \"${cachepath}\" is not a directory\n"
+        exit 1
+fi
+if ! [ -d "${mnt}" ]
+then
+        printf "ERROR: \"${mnt}\" is not a directory\n"
+        exit 1
+fi
 
 # Needs to be run as root so we are allowed to mount and set other permissions
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 1>&2
-   echo "Try re-running it as 'sudo $0'" 1>&2
+   printf "This script must be run as root"
+   printf "Try re-running it as 'sudo $0 $@'"
    exit 1
 fi
 
-imgfile="tmf-hudl-thumb-drive.img"
-tcliso="Core-current.iso"
-tcliso_url="http://tinycorelinux.net/11.x/x86/release/${tcliso}"
-mntimg="mnt/img"
-mntiso="mnt/iso"
-tce_cache="tce-cache"
+imgfile="${cachepath}/tmf-hudl-thumb-drive.img"
+tcliso="${cachepath}/Core-current.iso"
+tcliso_url="http://tinycorelinux.net/11.x/x86/release/Core-current.iso"
+mntimg="${mnt}/img"
+mntiso="${mnt}/iso"
+tce_cache="${cachepath}/tce"
 
 # Start by making an empty .img file.  600MB is plenty TODO: tune this down
 # creating this as a sparse file saves time and disk space
-echo "Creating empty file: ${imgfile}"
-#dd if=/dev/zero of="${imgfile}" bs=1M count=600 status=none
-dd if=/dev/zero of="${imgfile}" bs=1 count=0 seek=600M status=none
+printf "Creating empty file: ${imgfile}\n"
+dd if=/dev/zero of="${imgfile}" bs=1 count=0 seek=600M status=none >/dev/null 2>&1
 
 # Attach a loop device to the file
 loop_device=`losetup --show -f ${imgfile}`
-echo "${imgfile} attached to ${loop_device}"
+printf "${imgfile} attached to ${loop_device}\n"
 
 # to create the partitions programatically (rather than manually)
 # we're going to simulate the manual input to fdisk
@@ -39,7 +74,7 @@ echo "${imgfile} attached to ${loop_device}"
 # document what we're doing in-line with the actual commands
 # Note that a blank line (commented as "default" will send a empty
 # line terminated with a newline to take the fdisk default.
-echo "Making the partion on ${imgfile}"
+printf "Making the partion(s) on ${imgfile}\n"
 sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk ${loop_device} >/dev/null
   o # clear the in memory partition table
   n # new partition
@@ -50,18 +85,18 @@ sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk ${loop_device} >/dev/null
   t # set the type of the new partition
   c # set teh tpe to 0xC (Win95 FAT32 (LBA))
   a # Mark the partitionas bootable
-  w # write the partition table and quit
+  w # write the partition table
   q # quit
 EOF
 
 # Get the OS to use the new partition table
-echo "Updating the OS to use the new partition(s)"
+printf "Updating the OS to use the new partition(s)\n"
 partprobe ${loop_device}
 
 # Format the imag as FAT32
 # The volume name "TMF-HUDL" is used by the syslinux boot process to wait until
 # the disk is mount and availble before finishing the boot process
-echo "Formatting the image as FAT32"
+printf "Formatting the image as FAT32\n"
 mkfs.vfat -n TMF-HUDL "${loop_device}p1"
 
 # Make the mount points
@@ -72,25 +107,25 @@ mkdir -pv ${mntiso}
 mount -v ${loop_device}p1 ${mntimg}
 
 # Get the Tiny Core Linux ISO file:
-[ -f "${tcliso}" ] || wget --no-verbose --show-progress $tcliso_url || exit 1
+[ -f "${tcliso}" ] || wget --no-verbose --show-progress --directory-prefix "${cachepath}" $tcliso_url || exit 1
 
 # mount the ISO file
 mount -v ${tcliso} ${mntiso}
 
 # Copy everything from the ISO to our flash image:
-# TODO: Perhaps we shoudl only copy what we actually want?
+# TODO: Perhaps we should only copy what we actually want?
 cp -aTv "${mntiso}" "${mntimg}"
 
 # unmount the ISO and remove the mount point
 umount -v ${mntiso}
-rm -rfv ${mntiso}
+rm -vd ${mntiso}
 
 # Modify the ISOLINUX from the ISO and replace with SYSLINUX
 mv -v "${mntimg}/boot/isolinux" "${mntimg}/boot/syslinux"
 rm -v "${mntimg}/boot/syslinux/isolinux.bin"
 rm -v "${mntimg}/boot/syslinux/boot.cat"
 rm -v "${mntimg}/boot/syslinux/isolinux.cfg"
-cp -v syslinux.cfg "${mntimg}/boot/syslinux"
+cp -v "${respath}/syslinux.cfg" "${mntimg}/boot/syslinux"
 
 # Add our Tiny Core Linux extensions here:
 mkdir -pv ${mntimg}/tce/optional
@@ -109,30 +144,29 @@ do
 	cp -v "${tce_cache}/${p}."* "${mntimg}/tce/optional"
 done
 
-echo "usbutils.tcz" >> "${mntimg}/tce/onboot.lst"
-cp -v "rktools.tcz" "${mntimg}/tce/optional"
-echo "libusb.tcz" >> "${mntimg}/tce/optional/rktools.tcz.dep"
-echo "rktools.tcz" >> "${mntimg}/tce/onboot.lst"
+printf "usbutils.tcz\n" >> "${mntimg}/tce/onboot.lst"
+cp -v "${respath}/rktools.tcz" "${mntimg}/tce/optional"
+printf "libusb.tcz\n" > "${mntimg}/tce/optional/rktools.tcz.dep"
+printf "rktools.tcz\n" >> "${mntimg}/tce/onboot.lst"
 
 # hudl-flash.sh and images are added to /tce/tmf-hudl by the build process
 # write a dummy hudl-flash.sh to report the error if anyone runs this image
 mkdir -pv "${mntimg}/tce/tmf-hudl"
-cp -v "hudl-flash.skel.sh" "${mntimg}/tce/tmf-hudl/hudl-flash.sh"
+cp -v "${respath}/hudl-flash.skel.sh" "${mntimg}/tce/tmf-hudl/hudl-flash.sh"
 
 # Add a data.tgz file that overwrites the tc user's ~/.profile to start the hudl-flash.sh script automatically
 # TODO: would be good to build this from scratch to get paths to match what's done in this script
-cp -v "mydata.tgz" "${mntimg}/tce"
+cp -v "${respath}/mydata.tgz" "${mntimg}/tce"
 
 # Fix ownerships
 chown -cR root:root ${mntimg}
 
 # Unmount our device and remove the mount point
 umount -v ${loop_device}p1
-rm -rfv ${mntimg}
-rm -fdv mnt
+rm -vd ${mntimg}
 
-echo "Making the image bootable"
-# Install SYSLINUX
+printf "Making the image bootable\n"
+# Install SYSLINUX on the image
 syslinux --directory /boot/syslinux --install "${loop_device}p1"
 # Install MBR
 dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/mbr.bin of="${loop_device}" status=none

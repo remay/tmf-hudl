@@ -3,32 +3,130 @@
 # Unpack the original boot amimation, overly the TMF Custom ROM logo and repack it
 # Format information here: https://android.googlesource.com/platform/frameworks/base/+/master/cmds/bootanimation/FORMAT.md 
 
-src="bootanimation-orig.zip"
-dst="bootanimation.zip"
-tdir="tmp_working_dir";
-logo="tmf-custom-rom.png";
+tdir="/tmp/mkanimation_working_dir.$$";
+
+force=0
+dry_run=0
+compress=1
+
+usage()
+{
+    printf "\n"
+    printf "$0 [-d | --dry-run] [-f | --force] [-n | --no-compression] [-w=<wdir> | --working-directory=<wdir>] <src-archive> <dest-archive> <overlay-img>\n\n"
+
+    printf "\t-h --help\tPrint this help\n"
+    printf "\t-d --dry-run\tSee what woudl be done, but don't actually do it\n"
+    printf "\t-f --force\tDo all the steps, regardless of whether <dest-archive> exists\n"
+    printf "\t-n --no-compression\tDon't compress the PNG files - speeds up development, but don't use for production\n\n"
+    printf "\t-w --working-directory\tset the temporary working directory. Defaults to a subdirectory of /tmp if not specified\n\n"
+
+    printf "<src-archive>  is the bootanimation.zip file extracted from the stock Hudl source image\n"
+    printf "<dest-archive> is the bootanimation.zip file that will be put back into the Hudl image\n"
+    printf "<overlay-img>  is the image file to overlay on the original boot animation\n\n"
+}
+
+if [ $# -eq 0 ] ; then
+    printf "ERROR: missing mandatory command line option. (Got $# expected 3).\n"
+    usage
+    exit 1
+fi
+
+while [ "$1" != "" ]; do
+    PARAM=`printf "%s" $1 | awk -F= '{print $1}'`
+    VALUE=`printf "%s" $1 | awk -F= '{print $2}'`
+    case $PARAM in
+        -h | --help)
+            usage
+            exit
+            ;;
+        -d | --dry-run)
+            dry_run=1
+            ;;
+        -f | --force)
+            force=1
+            ;;
+        -n | --no-compression)
+            compress=0
+            ;;
+        -w | --working-directory)
+            tdir=$VALUE
+            ;;
+        -*)
+            printf "ERROR: unknown command line parameter \"${PARAM}\"\n"
+            usage
+            exit 1
+            ;;
+         *)
+            if [ $# -ne 3 ] ; then
+                printf "ERROR: wrong number of mandatory arguements. Got: $# Expecting: 3\n"
+                usage
+                exit 1
+            fi
+	    src=$1
+	    shift
+	    dst=$1
+	    shift
+	    logo=$1
+            ;;
+    esac
+    shift
+done
+
+# If the dst exists we don't do anything unless we're forcing it ...
+if [ -f "${dst}" ] && [ $force -eq 0 ] ; then
+	printf "Output file \"${dst}\" already exists - nothing to do\n"
+	exit 0;
+fi
 
 # Check we have a source file:
 if ! [ -f "${src}" ]
 then
-	echo "Missing input file for bootanimation - skipping" 1>&2
+	printf "Missing input file \"${src}\" for bootanimation - can't continue\n"
 	exit 1
 fi
 
+# Check we have a logo file:
+if ! [ -f "${logo}" ]
+then
+	printf "Missing logo file \"${logo}\" for bootanimation - can't continue\n"
+	exit 1
+fi
+
+# make the working directory if needed
+mkdir -pv "${tdir}" || exit 1;
+
 # Expand the original animation
-unzip -q $src -d $tdir
+printf "Expanding \"${src}\" ...\n"
+if [ $dry_run -eq 0 ] ; then
+    unzip -q "${src}" -d "${tdir}" || exit 1;
+fi
 
 # Overlay the logo onto the part1 PNGs.
-find "$tdir/part1" -name '*.png' -exec composite $logo -gravity south -geometry +0+10 "{}" "{}" \;
+printf "Overlaying \"${logo}\" ...\n"
+if [ $dry_run -eq 0 ] ; then
+    find "${tdir}/part1" -name '*.png' -exec composite "${logo}" -gravity south -geometry +0+10 "{}" "{}" \;
+fi
 
-# Optimally compress all the PNG images
-find "$tdir" -name '*.png' -exec zopflipng -m -y "{}" "{}" \;
+# Optimally compress all the PNG images (optionally)
+if [ $compress -eq 1 ] ; then
+    printf "Compressing the PNG files ...\n"
+    if [ $dry_run -eq 0 ] ; then
+        find "${tdir}" -name '*.png' -exec zopflipng -m -y "{}" "{}" \;
+    fi
+fi
 
 # Create the new animation ZIP file
-( cd $tdir ; zip -0qry -i \*.txt \*.png @ "../$dst" *.txt part* )
+printf "Forming \"${dst}\" ...\n"
+if [ $dry_run -eq 0 ] ; then
+    dstfile=`basename ${dst}`
+    ( cd "${tdir}" ; zip -0qry -i \*.txt \*.png @ "${dstfile}" *.txt part* )
+    mv -v "${tdir}/${dstfile}" "${dst}"
+fi
 
 # Tidy up
-# May want to comment this out and tidy up by hand, as the PNG compression step is **slow**
-rm -rf $tdir
+printf "Tidying up ...\n"
+if [ $dry_run -eq 0 ] ; then
+    rm -rf "${tdir}"
+fi
 
 exit 0

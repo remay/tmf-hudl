@@ -1,8 +1,1 @@
-**.img
-**.zip
-**.dump
-**.bak
-**.iso
-mnt/
-bootanimation/tmp_working_dir/
-thumbdrive/tce-cache/
+.tmf-rom-build/

@@ -8,112 +8,213 @@
 
 # We need to run as root to keep permissions within the image file correct
 # Check we are running as root
+# TODO - see if we can easily down-privilege the commands that don't need to be run as root
+
+version='0.2'
+
+cachepath=".tmf-rom-build/cache"
+buildpath=".tmf-rom-build/v${version}"
+mnt="${buildpath}/mnt"
+anipath="${buildpath}/bootanimation"
+aniflags=
+
+stockimg="${cachepath}/hudl.20140424.153851.stock.img"
+stockimg_url='https://github.com/remay/tmf-hudl/releases/download/stock-rom-v1.0/hudl.20140424.153851.stock.img.zip'
+
+tmfimg="${buildpath}/hudl.20140424.153851.TMF-Custom-v${version}.img"
+sysimg="${tmfimg}.dump/Image/system.img"
+miscimg="${tmfimg}.dump/Image/misc.img"
+
+force=0
+clear_cache=0
+compress=1
+build_rkfw=1
+build_thumb=1
+
+usage()
+{
+    printf "\n"
+    printf "$0 [ OPTIONS ]\n\n"
+
+    printf "\t-h --help\tPrint this help\n"
+    printf "\t-f --force\tRe-build, overwriting previous changes\n"
+    printf "\t-b --bootanimation-no-compression\tSpeed up creating the boot animation by turning off image compression\n"
+    printf "\t-n --img-no-compression\tDon't compress the .img artefacts\n"
+    printf "\t-r --no-build-rkfw\tDon't build the Rockchip Batch Image\n"
+    printf "\t-t --no-build-thumbdrive\tDon't build the Thumb drive Image\n"
+    printf "\t-c --clear-cache\tClear the cache and re-download/re-build the cached data.  Implies -f\n"
+}
+
+while [ "$1" != "" ]; do
+    PARAM=`printf "%s" $1 | awk -F= '{print $1}'`
+    VALUE=`printf "%s" $1 | awk -F= '{print $2}'`
+    case $PARAM in
+        -b | --bootanimation-no-compression)
+            aniflags="${aniflags} -n"
+            ;;
+        -c | --clear-cache)
+            clear_cache=1
+            force=1
+            ;;
+        -f | --force)
+            force=1
+	    aniflags="${aniflags} -f"
+            ;;
+        -h | --help)
+            usage
+            exit
+            ;;
+        -n | --img-no-compression)
+            compress=0
+            ;;
+        -r | --no-build-rkfw)
+            build_rkfw=0
+            ;;
+        -t | --no-build-thumbdrive)
+            build_thumb=0
+            ;;
+        -*)
+            printf "ERROR: unknown command line parameter \"${PARAM}\"\n"
+            usage
+            exit 1
+            ;;
+         *)
+            printf "ERROR: unknown command line parameter \"${PARAM}\"\n"
+            usage
+            exit 1
+            ;;
+    esac
+    shift
+done
+
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 1>&2
-   echo "Try re-running it as 'sudo $0'" 1>&2
+   printf "This script must be run as root\n"
+   printf "Try re-running it as 'sudo $0 $@'\n\n"
    exit 1
 fi
 
-version='0.2'
-stockimg='hudl.20140424.153851.stock.img'
-stockimg_url='https://github.com/remay/tmf-hudl/releases/download/stock-rom-v1.0/hudl.20140424.153851.stock.img.zip'
-tmfimg="hudl.20140424.153851.TMF-Custom-v${version}.img"
-sysimg="${tmfimg}.dump/Image/system.img"
-miscimg="${tmfimg}.dump/Image/misc.img"
-mnt='mnt'
+# Clear the cache
+[ $clear_cache -eq 1 ] && rm -vrf "${cachepath}"
+
+# Make the build directories, if needed
+mkdir -pv "${cachepath}" || exit 1
+mkdir -pv "${buildpath}" || exit 1
+mkdir -pv "${mnt}" || exit 1
+mkdir -pv "${anipath}" || exit 1
 
 # Download and unpack the stock image, if needed
-[ -f "${stockimg}" ] || [ -f "${stockimg}.zip" ] || wget --no-verbose --show-progress $stockimg_url || exit 1
-[ -f "${stockimg}" ] || unzip "${stockimg}.zip" || exit 1
-[ -d "${stockimg}.dump" ] || imgrepackerrk $stockimg || exit 1
+[ -f "${stockimg}" ] || [ -f "${stockimg}.zip" ] || wget --no-verbose --show-progress --directory-prefix "${cachepath}" $stockimg_url || exit 1
+[ -f "${stockimg}" ] || unzip "${stockimg}.zip" -d "${cachepath}" || exit 1
+[ -d "${stockimg}.dump" ] || imgrepackerrk "${stockimg}" || exit 1
 
-# Rename the unpacked folder to match our release version
-[ -d "${tmfimg}.dump" ] && echo "Directory ${tmfimg}.dump exists.  Remove it and try again." && exit 1
-mv -v "${stockimg}.dump" "${tmfimg}.dump"
+# Copy the stock image as our staring image
+if [ -d "${tmfimg}.dump" ] ; then
+    if [ $force -eq 1 ] ; then
+        rm -vrf "${tmfimg}.dump"
+	rm -vf "${tmfimg}"
+	rm -vf "${tmfimg}.zip"
+	# TODO also remove the thumbdrive artefacts?
+    else
+        printf "Directory \"${tmfimg}.dump\" exists.  Try again using the -f/--force commandline option.\n"
+        exit 1
+    fi
+fi
+cp -av "${stockimg}.dump" "${tmfimg}.dump"
 
-# Create a mount point and mount the system image so we can modify it
-mkdir -pv "${mnt}" && mount -v $sysimg $mnt
+# mount the system image so we can modify it
+mount -v "${sysimg}" "${mnt}" || exit 1
 
 # ** Remove the annoying boot jingle
-mv -v $mnt/media/audio/boot.ogg $mnt/media/audio/boot.ogg.nothanks
+mv -v "${mnt}/media/audio/boot.ogg" "${mnt}/media/audio/boot.ogg.nothanks"
 
 # ** Install our custom bootanimation
-#    - extract the original bootanimation
-[ -f bootanimation/bootanimation-orig.zip ] || cp -v $mnt/media/bootanimation.zip bootanimation/bootanimation-orig.zip
-#    - create the new bootanimation
-[ -f bootanimation/bootanimation.zip ] || ( cd bootanimation && ./mkanimation )
+#    - extract the original bootanimation (if needed)
+[ -f "${anipath}/bootanimation-orig.zip" ] || cp -v "${mnt}/media/bootanimation.zip" "${anipath}/bootanimation-orig.zip"
+#    - create the new bootanimation (if needed)
+./bootanimation/mkanimation ${aniflags} -w="${anipath}/tmp" "${anipath}/bootanimation-orig.zip" "${anipath}/bootanimation.zip" "bootanimation/tmf-custom-rom.png"
 #    - copy the new bootanimation back to the image
-cp -v bootanimation/bootanimation.zip $mnt/media/bootanimation.zip
+cp -v "${anipath}/bootanimation.zip" "${mnt}/media/bootanimation.zip"
 
-# ** Stop tht setup wizard from running
-echo "Modifying install-recovery.sh"
-cat SetupWizard/stop-wizard >> $mnt/etc/install-recovery.sh
+# ** Stop the setup wizard from running
+printf "Modifying install-recovery.sh ...\n"
+cat SetupWizard/stop-wizard >> "${mnt}/etc/install-recovery.sh"
 
 # ** Remove all non-functional apps
-rm -v $mnt/app/appupdater.apk        # Hudl App Updater - One of the sources of call to the defunct Tesco server
-rm -v $mnt/app/otaclient.apk         # Hudl OTA Client - Another source of calls to the defunct TEsco server
-rm -v $mnt/app/otaclient.odex
-rm -v $mnt/app/hudlsetup.apk         # Hudl setup - addd the extra Tesco Account setup pages after the startup Wizard
-rm -v $mnt/app/hudlsetup.odex
-rm -v $mnt/app/blinkboxmovies.apk    # BlinkBox Movies
-rm -v $mnt/app/blinkboxmusic.apk     # BlinkBox Music
-rm -v $mnt/app/blinkboxwidget.apk    # BlinkBox Widget
-rm -v $mnt/app/clubcardtv.apk        # Club Card TV
-rm -v $mnt/app/clubcardwidget.apk    # Club Card Widget
-rm -v $mnt/app/getstarted.apk        # Get Started App
-rm -v $mnt/app/grocery.apk           # Tesco Groceries
-rm -v $mnt/app/grocerywidget.apk     # Tesco Groceries Widget
-rm -v $mnt/app/storelocator.apk      # Tesco Store Locator
-rm -v $mnt/app/tescoaccountapp.apk   # Tesco Account App
-rm -v $mnt/app/tescodirectwidget.apk # Tesco Direct Widget
-rm -v $mnt/app/tescolauncher.apk     # Tesco App Launcher
+rm -v "${mnt}/app/appupdater.apk"        # Hudl App Updater - One of the sources of call to the defunct Tesco server
+rm -v "${mnt}/app/otaclient.apk"         # Hudl OTA Client - Another source of calls to the defunct TEsco server
+rm -v "${mnt}/app/otaclient.odex"
+rm -v "${mnt}/app/hudlsetup.apk"         # Hudl setup - addd the extra Tesco Account setup pages after the startup Wizard
+rm -v "${mnt}/app/hudlsetup.odex"
+rm -v "${mnt}/app/blinkboxmovies.apk"    # BlinkBox Movies
+rm -v "${mnt}/app/blinkboxmusic.apk"     # BlinkBox Music
+rm -v "${mnt}/app/blinkboxwidget.apk"    # BlinkBox Widget
+rm -v "${mnt}/app/clubcardtv.apk"        # Club Card TV
+rm -v "${mnt}/app/clubcardwidget.apk"    # Club Card Widget
+rm -v "${mnt}/app/getstarted.apk"        # Get Started App
+rm -v "${mnt}/app/grocery.apk"           # Tesco Groceries
+rm -v "${mnt}/app/grocerywidget.apk"     # Tesco Groceries Widget
+rm -v "${mnt}/app/storelocator.apk"      # Tesco Store Locator
+rm -v "${mnt}/app/tescoaccountapp.apk"   # Tesco Account App
+rm -v "${mnt}/app/tescodirectwidget.apk" # Tesco Direct Widget
+rm -v "${mnt}/app/tescolauncher.apk"     # Tesco App Launcher
 
 # ** Get rid of the [T] Tesco button from the navigation bar
-cp -v SystemUI/SystemUI.apk.new $mnt/app/SystemUI.apk
+cp -v SystemUI/SystemUI.apk.new "${mnt}/app/SystemUI.apk"
 
-# ** Put our build info into the build.properties file
+# ** Put our build info into the build.prop file
 # Appears in the settings app: About Tablet -> Build  number field
-sed -i -e "s/ro.build.display.id=JDQ39.20140424.153851/ro.build.display.id=TMF Custom ROM v${version} JDQ39.20140424.153851/" $mnt/build.properties
+sed -i -e "s/ro.build.display.id=JDQ39.20140424.153851/ro.build.display.id=TMF Custom ROM v${version} JDQ39.20140424.153851/" "${mnt}/build.prop"
 
-# unmount the system image and remove our mount point
-umount -v $mnt && rm -rf $mnt
+# unmount the system image
+umount -v "${mnt}"
 
 # create a misc.img that on first boot wipes userdata and cache and then reboots tp get us cleanly into the new
 # image
-echo "Creating new misc.img"
+printf "Creating new misc.img ...\n"
 rkmisc wipe_all $miscimg >/dev/null 2>&1
 
 # Re-pack the monolithic image and zip it up
-imgrepackerrk "${tmfimg}.dump"
-zip -dd -v "${tmfimg}.zip" ${tmfimg}
+if [ $build_rkfw -eq 1 ] ; then
+    imgrepackerrk "${tmfimg}.dump"
+    if [ $compress -eq 1 ] ; then
+      ( img=`basename "${tmfimg}"` ; cd "${buildpath}" ; zip -dd -v "${img}.zip" "${img}" )
+    fi
+fi
 
+# TODO mkthumbdrive should take a parameter for the name of the img it creates
 # Make the flash drive image, if needed
-[ -f thumbdrive/tmf-hudl-thumb-drive.img ] || ( cd thumbdrive; ./mkflashdrive.sh )
+if [ $build_thumb -eq 1 ] ; then
+    [ -f "${cachepath}/tmf-hudl-thumb-drive.img" ] || ./thumbdrive/mkthumbdrive.sh thumbdrive "${cachepath}" "${mnt}" || exit 1;
 
-# Make a copy of the thumbdrive amd push the image parts and flash program into it
-cp -v thumbdrive/tmf-hudl-thumb-drive.img "tmf-hudl-thumbdrive-v${version}.img"
+    # Make a copy of the thumbdrive amd push the image parts and flash program into it
+    thumbimg="${buildpath}/tmf-hudl-thumbdrive-v${version}.img"
+    cp -v "${cachepath}/tmf-hudl-thumb-drive.img" "${thumbimg}"
 
-# Create a mount point and mount the thumbdrive image so we can modify it
-loop_device=`losetup --show -f "tmf-hudl-thumbdrive-v${version}.img"`
-mkdir -pv "${mnt}" && mount -v "${loop_device}p1" "${mnt}"
+    # mount the thumbdrive image so we can modify it
+    loop_device=`losetup --show -f "${thumbimg}"`
+    mount -v "${loop_device}p1" "${mnt}"
 
-# Copy compressed partition images to the thumbdrive
-gzip -cv9 "${tmfimg}.dump/parameter"              >"${mnt}/tce/tmf-flash/parameter.gz"
-gzip -cv9 "${tmfimg}.dump/Image/boot.img"         >"${mnt}/tce/tmf-flash/boot.img.gz"
-gzip -cv9 "${tmfimg}.dump/Image/recovery.img"     >"${mnt}/tce/tmf-flash/recovery.img.gz"
-gzip -cv9 "${tmfimg}.dump/Image/kernel.img"       >"${mnt}/tce/tmf-flash/kernel.img.gz"
-gzip -cv9 "${tmfimg}.dump/Image/system.img"       >"${mnt}/tce/tmf-flash/system.img.gz"
-gzip -cv9 "${tmfimg}.dump/Image/misc.img"         >"${mnt}/tce/tmf-flash/misc.img.gz"
-gzip -cv9 "${tmfimg}.dump/backupimage/backup.img" >"${mnt}/tce/tmf-flash/backup.img.gz"
-cp -v tmf-flash.sh "${mnt}/tce/tmf-flash"
+    # Copy compressed partition images to the thumbdrive
+    gzip -cv9 "${tmfimg}.dump/parameter"              >"${mnt}/tce/tmf-hudl/parameter.gz"
+    gzip -cv9 "${tmfimg}.dump/Image/boot.img"         >"${mnt}/tce/tmf-hudl/boot.img.gz"
+    gzip -cv9 "${tmfimg}.dump/Image/recovery.img"     >"${mnt}/tce/tmf-hudl/recovery.img.gz"
+    gzip -cv9 "${tmfimg}.dump/Image/kernel.img"       >"${mnt}/tce/tmf-hudl/kernel.img.gz"
+    gzip -cv9 "${tmfimg}.dump/Image/system.img"       >"${mnt}/tce/tmf-hudl/system.img.gz"
+    gzip -cv9 "${tmfimg}.dump/Image/misc.img"         >"${mnt}/tce/tmf-hudl/misc.img.gz"
+    gzip -cv9 "${tmfimg}.dump/backupimage/backup.img" >"${mnt}/tce/tmf-hudl/backup.img.gz"
+    cp -v hudl-flash.sh "${mnt}/tce/tmf-hudl"
 
-# unmount the thumbdrive image and remove our mount point
-umount -v $mnt && rm -rf $mnt
-losetup -d ${loop_device}
+    # unmount the thumbdrive image and remove our mount point
+    umount -v $mnt
+    losetup -d ${loop_device}
 
-# zip up the thumbdrive img file
-zip -dd -v "tmf-hudl-thumbdrive-v${version}.zip" "tmf-hudl-thumbdrive-v${version}.img"
+    # zip up the thumbdrive img file
+    if [ $compress -eq 1 ] ; then
+      ( img=`basename "${thumbimg}" img` ; cd "${buildpath}" ; zip -dd -v "${img}.zip" "${img}.img" )
+    fi
+fi
 
+# TODO command line options for how much to tidy-up
 # Tidy up (remove this if you want to make you own additional changes to the image
 #rm -rf "${tmfimg}.dump"
 #rm "${tmfimg}"
