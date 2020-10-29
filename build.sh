@@ -8,12 +8,13 @@
 
 # We need to run as root to keep permissions within the image file correct
 # Check we are running as root
-# TODO - see if we can easily down-privilege the commands that don't need to be run as root
+# TODO - see if we can down-privilege the commands that don't need to be run as root
 
 version='0.2'
 
-cachepath=".tmf-rom-build/cache"
-buildpath=".tmf-rom-build/v${version}"
+basepath=".tmf-rom-build"
+cachepath="${basepath}/cache"
+buildpath="${basepath}/v${version}"
 mnt="${buildpath}/mnt"
 anipath="${buildpath}/bootanimation"
 aniflags=
@@ -24,6 +25,8 @@ stockimg_url='https://github.com/remay/tmf-hudl/releases/download/stock-rom-v1.0
 tmfimg="${buildpath}/hudl.20140424.153851.TMF-Custom-v${version}.img"
 sysimg="${tmfimg}.dump/Image/system.img"
 miscimg="${tmfimg}.dump/Image/misc.img"
+
+thumbimg="${buildpath}/tmf-hudl-thumbdrive-v${version}.img"
 
 force=0
 clear_cache=0
@@ -42,7 +45,8 @@ usage()
     printf "\t-n --img-no-compression\tDon't compress the .img artefacts\n"
     printf "\t-r --no-build-rkfw\tDon't build the Rockchip Batch Image\n"
     printf "\t-t --no-build-thumbdrive\tDon't build the Thumb drive Image\n"
-    printf "\t-c --clear-cache\tClear the cache and re-download/re-build the cached data.  Implies -f\n"
+    printf "\t-l --clear-cache\tClear the cache and re-download/re-build the cached data.  Implies -f\n"
+    printf "\t-c --clean\tClean (delete) the build directory and exit.  Ignore all other options.\n\n"
 }
 
 while [ "$1" != "" ]; do
@@ -52,17 +56,23 @@ while [ "$1" != "" ]; do
         -b | --bootanimation-no-compression)
             aniflags="${aniflags} -n"
             ;;
-        -c | --clear-cache)
-            clear_cache=1
-            force=1
+        -c | --clean)
+	    rm -rf "${basepath}"
+	    printf "Cleaned build directory \"${basepath}\".\n"
+	    exit 0
             ;;
         -f | --force)
             force=1
-	    aniflags="${aniflags} -f"
+	    # TODO need an option to force re-build of the bootanimation, but -f isn't it
+	    #aniflags="${aniflags} -f"
             ;;
         -h | --help)
             usage
             exit
+            ;;
+        -l | --clear-cache)
+            clear_cache=1
+            force=1
             ;;
         -n | --img-no-compression)
             compress=0
@@ -111,9 +121,10 @@ mkdir -pv "${anipath}" || exit 1
 if [ -d "${tmfimg}.dump" ] ; then
     if [ $force -eq 1 ] ; then
         rm -vrf "${tmfimg}.dump"
-	rm -vf "${tmfimg}"
-	rm -vf "${tmfimg}.zip"
-	# TODO also remove the thumbdrive artefacts?
+        rm -vf "${tmfimg}"
+        rm -vf "${tmfimg}.zip"
+        rm -vf "${thumbimg}"
+        rm -vf "${thumbimg}.zip"
     else
         printf "Directory \"${tmfimg}.dump\" exists.  Try again using the -f/--force commandline option.\n"
         exit 1
@@ -182,12 +193,12 @@ if [ $build_rkfw -eq 1 ] ; then
 fi
 
 # TODO mkthumbdrive should take a parameter for the name of the img it creates
+# TODO mkthumbdrive should take an option for the mount path (and use a TMP dir if not supplied)
 # Make the flash drive image, if needed
 if [ $build_thumb -eq 1 ] ; then
     [ -f "${cachepath}/tmf-hudl-thumb-drive.img" ] || ./thumbdrive/mkthumbdrive.sh thumbdrive "${cachepath}" "${mnt}" || exit 1;
 
     # Make a copy of the thumbdrive amd push the image parts and flash program into it
-    thumbimg="${buildpath}/tmf-hudl-thumbdrive-v${version}.img"
     cp -v "${cachepath}/tmf-hudl-thumb-drive.img" "${thumbimg}"
 
     # mount the thumbdrive image so we can modify it
@@ -210,11 +221,9 @@ if [ $build_thumb -eq 1 ] ; then
 
     # zip up the thumbdrive img file
     if [ $compress -eq 1 ] ; then
-      ( img=`basename "${thumbimg}" img` ; cd "${buildpath}" ; zip -dd -v "${img}.zip" "${img}.img" )
+      ( img=`basename "${thumbimg}" .img` ; cd "${buildpath}" ; zip -dd -v "${img}.zip" "${img}.img" )
     fi
 fi
 
-# TODO command line options for how much to tidy-up
-# Tidy up (remove this if you want to make you own additional changes to the image
-#rm -rf "${tmfimg}.dump"
-#rm "${tmfimg}"
+# Tidy up
+rm -vd "${mnt}"
