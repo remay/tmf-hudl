@@ -6,16 +6,14 @@
 tdir="/tmp/mkanimation_working_dir.$$";
 
 force=0
-dry_run=0
 compress=1
 
 usage()
 {
     printf "\n"
-    printf "$0 [-d | --dry-run] [-f | --force] [-n | --no-compression] [-w=<wdir> | --working-directory=<wdir>] <src-archive> <dest-archive> <overlay-img>\n\n"
+    printf "$0 [-f | --force] [-n | --no-compression] [-w=<wdir> | --working-directory=<wdir>] <src-archive> <dest-archive> <overlay-img>\n\n"
 
     printf "\t-h --help\tPrint this help\n"
-    printf "\t-d --dry-run\tSee what woudl be done, but don't actually do it\n"
     printf "\t-f --force\tDo all the steps, regardless of whether <dest-archive> exists\n"
     printf "\t-n --no-compression\tDon't compress the PNG files - speeds up development, but don't use for production\n\n"
     printf "\t-w --working-directory\tset the temporary working directory. Defaults to a subdirectory of /tmp if not specified\n\n"
@@ -38,9 +36,6 @@ while [ "$1" != "" ]; do
         -h | --help)
             usage
             exit
-            ;;
-        -d | --dry-run)
-            dry_run=1
             ;;
         -f | --force)
             force=1
@@ -97,36 +92,26 @@ mkdir -pv "${tdir}" || exit 1;
 
 # Expand the original animation
 printf "Expanding \"${src}\" ...\n"
-if [ $dry_run -eq 0 ] ; then
-    unzip -q "${src}" -d "${tdir}" || exit 1;
-fi
+unzip -q "${src}" -d "${tdir}" || exit 1;
 
 # Overlay the logo onto the part1 PNGs.
 printf "Overlaying \"${logo}\" ...\n"
-if [ $dry_run -eq 0 ] ; then
-    find "${tdir}/part1" -name '*.png' -exec composite "${logo}" -gravity south -geometry +0+10 "{}" "{}" \;
-fi
+find "${tdir}/part1" -name '*.png' -exec composite "${logo}" -gravity south -geometry +0+10 "{}" "{}" \;
 
 # Optimally compress all the PNG images (optionally)
 if [ $compress -eq 1 ] ; then
     printf "Compressing the PNG files ...\n"
-    if [ $dry_run -eq 0 ] ; then
-        find "${tdir}" -name '*.png' -exec zopflipng -m -y "{}" "{}" \;
-    fi
+    find "${tdir}" -name '*.png' -exec zopflipng -m -y "{}" "{}" \;
 fi
 
 # Create the new animation ZIP file
 printf "Forming \"${dst}\" ...\n"
-if [ $dry_run -eq 0 ] ; then
-    dstfile=`basename ${dst}`
-    ( cd "${tdir}" ; zip -0qry -i \*.txt \*.png @ "${dstfile}" *.txt part* )
-    mv -v "${tdir}/${dstfile}" "${dst}"
-fi
+dstfile=`basename ${dst}`
+( cd "${tdir}" ; zip -0qry -i \*.txt \*.png @ "${dstfile}" *.txt part* )
+mv -v "${tdir}/${dstfile}" "${dst}"
 
 # Tidy up
 printf "Tidying up ...\n"
-if [ $dry_run -eq 0 ] ; then
-    rm -rf "${tdir}"
-fi
+rm -rf "${tdir}"
 
 exit 0
