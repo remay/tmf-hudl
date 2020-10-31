@@ -10,7 +10,7 @@
 # Check we are running as root
 # TODO - see if we can down-privilege the commands that don't need to be run as root
 
-version='0.2'
+version='0.3'
 
 basepath=".tmf-rom-build"
 cachepath="${basepath}/cache"
@@ -177,7 +177,7 @@ cp -v SystemUI/SystemUI.apk.new "${mnt}/app/SystemUI.apk"
 sed -i -e "s/ro.build.display.id=JDQ39.20140424.153851/ro.build.display.id=TMF Custom ROM v${version} JDQ39.20140424.153851/" "${mnt}/build.prop"
 
 # Pull ro.product.model from build.prop to use later
-ro_product_model=`grep 'ro.product.model' "${mnt}/build.prop" | awk -F= '{print $2}'`
+ro_product_model=`grep "ro\\.product\\.model" "${mnt}/build.prop" | awk -F= '{print $2}'`
 
 # unmount the system image
 umount -v "${mnt}"
@@ -185,13 +185,13 @@ umount -v "${mnt}"
 # create a misc.img that on first boot wipes userdata and cache and then reboots tp get us cleanly into the new
 # image
 printf "Creating new misc.img ...\n"
-rkmisc wipe_all $miscimg >/dev/null 2>&1
+rkmisc wipe_all "${miscimg}" >/dev/null 2>&1
 
 # Re-pack the monolithic image and zip it up
 if [ $build_rkfw -eq 1 ] ; then
     # Update the "MACHINE_MODEL" to match the ro.product.model from build.prop - this is needed to pass the
     # tests when flasking an RK Image file from an SD Card
-    sed -i -e "s/^MACHINE_MODEL:.*$/MACHINE_MODEL:${ro_product_model/" "${tmfimg}.dump/parameter"
+    sed -i -e "s/^MACHINE_MODEL:.*$/MACHINE_MODEL:${ro_product_model}/" "${tmfimg}.dump/parameter"
 
     # Pack up the RKFW .img file
     imgrepackerrk "${tmfimg}.dump"
