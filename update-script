@@ -1,0 +1,20 @@
+#!enable_script
+
+ui_print("\nTMF Custom ROM: About to clear the cache and userdata partitions ...");
+sleep(5);
+ui_print("TMF Custom ROM: unmounting cache ...");
+unmount("/cache");
+ui_print("TMF Custom ROM: formatting cache ...");
+format("ext4", "EMMC", "/dev/block/mtd/by-name/cache",    "0", "/cache");
+ui_print("TMF Custom ROM: unmounting data ...");
+unmount("/data");
+ui_print("TMF Custom ROM: formatting userdata ...");
+format("ext4", "EMMC", "/dev/block/mtd/by-name/userdata", "0", "/data");
+
+ui_print("\nTMF Custom ROM Installed successfully.");
+ui_print("Rebooting ...\n");
+sleep(2);
+# Calling 'recovery --just_exit' clears the BCB and reboots.  This skips
+# re-writing the bootloader and removes the need for the user to
+# manually reboot.
+run_program("/sbin/recovery", "--just_exit");

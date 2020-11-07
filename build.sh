@@ -10,7 +10,7 @@
 # Check we are running as root
 # TODO - see if we can down-privilege the commands that don't need to be run as root
 
-version='0.3'
+version='0.4'
 
 basepath=".tmf-rom-build"
 cachepath="${basepath}/cache"
@@ -189,16 +189,22 @@ rkmisc wipe_all "${miscimg}" >/dev/null 2>&1
 
 # Re-pack the monolithic image and zip it up
 if [ $build_rkfw -eq 1 ] ; then
-    # Update the "MACHINE_MODEL" to match the ro.product.model from build.prop - this is needed to pass the
-    # tests when flasking an RK Image file from an SD Card
-    sed -i -e "s/^MACHINE_MODEL:.*$/MACHINE_MODEL:${ro_product_model}/" "${tmfimg}.dump/parameter"
+    # Inject our update-script to wipe the data and cache partitions
+    # when flashing from SD Card, as that doesn't using our misc
+    # paritition to do this
+    # TODO: Confirm this doesn't do anything when using rkBatch Tool
+    cp -vf update-script "${tmfimg}.dump"
 
     # Pack up the RKFW .img file
     imgrepackerrk "${tmfimg}.dump"
 
+    # Update the "MACHINE_MODEL" to match the ro.product.model from build.prop - this is needed to pass the
+    # tests when flasking an RK Image file from an SD Card
+    ./patch-rkimg.pl --model "${ro_product_model}" "${tmfimg}"
+
     # ZIP it if unless requested not to
     if [ $compress -eq 1 ] ; then
-      ( img=`basename "${tmfimg}"` ; cd "${buildpath}" ; zip -dd -v "${img}.zip" "${img}" )
+      ( img=`basename "${tmfimg}"` ; cd "${buildpath}" ; zip -9 -dd -v "${img}.zip" "${img}" )
     fi
 fi
 
@@ -213,6 +219,8 @@ if [ $build_thumb -eq 1 ] ; then
 
     # mount the thumbdrive image so we can modify it
     loop_device=`losetup --show -f "${thumbimg}"`
+    printf "${thumbimg} attached to device ${loop_device}\n"
+    lsblk # FIXME remove once we find out why this is failing
     mount -v "${loop_device}p1" "${mnt}"
 
     # Copy compressed partition images to the thumbdrive
@@ -231,7 +239,7 @@ if [ $build_thumb -eq 1 ] ; then
 
     # zip up the thumbdrive img file
     if [ $compress -eq 1 ] ; then
-      ( img=`basename "${thumbimg}" .img` ; cd "${buildpath}" ; zip -dd -v "${img}.zip" "${img}.img" )
+      ( img=`basename "${thumbimg}" .img` ; cd "${buildpath}" ; zip -9 -dd -v "${img}.zip" "${img}.img" )
     fi
 fi
 
