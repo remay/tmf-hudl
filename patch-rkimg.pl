@@ -10,17 +10,17 @@ use Getopt::Long qw(GetOptions);
 # Patch the RKAF firmware image header to make the machine model be 'Hudl HT7S3' as
 # the recovery program checks this when trying to flash the firmware from SD Card
 # The RKAF file can be stand-alone or embedded in an RKFW wrapper.
-# Originally we modified teh machine model in th eparamter file and allowed
+# Originally we modified the machine model in the paramter file and allowed
 # imgrepackrk to do this, but avoiding the change in the parameters block is
-# adventageous as it removes one source of needed teh device to reboot during
-# the flashing program
+# adventageous as it removes one source of needing the device to reboot while
+# flashing.
 
 sub usage {
 	my $exit_val = shift;
 
 	print "\nUsage: patch-rkimg.pl [-v | --verbose] [-m <model> | --model <model>] <imgfile>\n\n";
 	print "Performs some checks to ensure <imgfile> is a valid Rockchip firmware image, and\n";
-	print "replaces teh model name is the RKAF header with the provided <model>. Defaults to\n";
+	print "replaces the model name in the RKAF header with the provided <model>. Defaults to\n";
 	print "'Hudl H7S3' if not provided.\n\n";
 
 	exit $exit_val;
@@ -40,9 +40,9 @@ my $num_args = $#ARGV + 1;
 die "Wrong number of command line arguements (Got: $num_args, expected 1)" if $num_args != 1;
 my ($file) = @ARGV;
 
-# TODO: refactor all the reading/writing of the file to do the DRD and MD5 checksums so that the
-# data is only read twice (as oppsed to nearly 4 times currently).  If we want speed, then add
-# an option to remove the CRC/MD5 checks and it shoudl be possible to read the data only once.
+# TODO: refactor all the reading/writing of the img file to do the CRC and MD5 checksums so that the
+# data is only read twice (as oppsed to more than 4 times currently).  If we want speed, then add
+# an option to remove the CRC/MD5 checks and it should be possible to read the data only once.
 # might also want an option to allow us to specify a different output file and not touch the
 # input file?
 #
@@ -65,7 +65,7 @@ my $buf;
 my $chunk_size = 32<<9;
 
 sysseek($fh, 0, SEEK_SET) or die "Failed to seek to start of file [$!]";
-sysread $fh, $buf, 512 or die "Read failed [$!]";
+sysread($fh, $buf, 512) or die "Read failed [$!]";
 
 my ($rkfw_sig, $fw_offset, $fw_size) = unpack("a4 x29 V V", $buf);
 
@@ -160,7 +160,7 @@ else {
 	printf "RKAF CRC32 Check passed (CRC %#08x)\n", $expected_crc if $verbose;
 }
 
-# All seems good, so mkae th eupdate, if needed
+# All seems good, so make the update, if needed
 if ($model ne $new_model) {
 	print "replacing '$model' with '$new_model'\n";
 
@@ -169,6 +169,7 @@ if ($model ne $new_model) {
 
 	# Ensure the new model is null terminated and write
 	# enough nulls to overwrite the old model
+	# TODO: should check new length doesn't exceed space in header
 	my $diff = length($model) - length($new_model);
 	$diff < 0 ? $diff=1 : $diff++;
 	$new_model .= "\0" x $diff;
