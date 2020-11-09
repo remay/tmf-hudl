@@ -8,26 +8,58 @@
 # this disk.
 
 force=0
+mnt="/tmp/mkthumbdrive_mnt..$$";
+mnt_supplied=0;
 
 usage()
 {
     printf "\n"
-    printf "$0 <res-dir> <cache-dir> <mnt-dir>\n\n"
+    printf "$0 [-m <mnt-dir> | --mount <mnt-dir>] <res-dir> <cache-dir>\n\n"
 
     printf "<res-dir>    is the directory where the build resources are found\n"
-    printf "<cache-dir>  is the directory where the build artefacts are stored\n"
-    printf "<mnt-dir>    is the directory used to create two temporary mount points while building the image\n\n"
+    printf "<cache-dir>  is the directory where the build artefacts are stored\n\n"
+
+    printf "--mount|-m <mnt-dir>\t<mnt-dir> is a directory used to create two temporary mount\n"
+    printf "                    \tpoints while building the image.  If not specified uses a tmp\n"
+    printf "                    \tlocation.\n\n"
 }
 
-if [ $# -ne 3 ] ; then
-    printf "ERROR: missing mandatory command line option. (Got $# expected 3).\n"
+if [ $# -lt 2 ] ; then
+    printf "ERROR: missing mandatory command line option. (Got $# expected 2).\n"
     usage
     exit 1
 fi
 
-respath=$1
-cachepath=$2
-mnt=$3
+while [ "$1" != "" ]; do
+    PARAM=`printf "%s" $1 | awk -F= '{print $1}'`
+    VALUE=`printf "%s" $1 | awk -F= '{print $2}'`
+    case $PARAM in
+        -h | --help)
+            usage
+            exit
+            ;;
+        -m | --mount)
+            mnt=$VALUE
+	    mnt_supplied=1
+            ;;
+        -*)
+            printf "ERROR: unknown command line parameter \"${PARAM}\"\n"
+            usage
+            exit 1
+            ;;
+         *)
+            if [ $# -ne 2 ] ; then
+                printf "ERROR: wrong number of mandatory arguements. Got: $# Expecting: 2\n"
+                usage
+                exit 1
+            fi
+            respath=$1
+            shift
+            cachepath=$1
+            ;;
+    esac
+    shift
+done
 
 if ! [ -d "${respath}" ]
 then
@@ -83,19 +115,20 @@ sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk ${loop_device} >/dev/null
     # default - start at beginning of disk
     # default, extend partition to end of disk
   t # set the type of the new partition
-  c # set teh tpe to 0xC (Win95 FAT32 (LBA))
-  a # Mark the partitionas bootable
+  c # set the type to 0xC (Win95 FAT32 (LBA))
+  a # Mark the partition as bootable
   w # write the partition table
   q # quit
 EOF
 
 # Get the OS to use the new partition table
-printf "Updating the OS to use the new partition(s)\n"
+printf "^- Expected failure: \"Re-reading the partition table failed.: Invalid argument\".\n"
+printf "Updating the OS to use the new partition(s) to fix this ...\n"
 partprobe ${loop_device}
 
-# Format the imag as FAT32
-# The volume name "TMF-HUDL" is used by the syslinux boot process to wait until
-# the disk is mount and availble before finishing the boot process
+# Format the image as FAT32
+# The volume name "TMF-HUDL" is used by our syslinux boot process to wait until
+# the disk is mounted and available before finishing the boot process
 printf "Formatting the image as FAT32\n"
 mkfs.vfat -n TMF-HUDL "${loop_device}p1"
 
@@ -165,6 +198,11 @@ chown -cR root:root ${mntimg}
 umount -v ${loop_device}p1
 rm -vd ${mntimg}
 
+# Remove the moutn directory if we created it
+if [ $mnt_supplied -eq 0 ] ; then
+	rm -vd ${mnt}
+fi
+
 printf "Making the image bootable\n"
 # Install SYSLINUX on the image
 syslinux --directory /boot/syslinux --install "${loop_device}p1"
@@ -173,5 +211,6 @@ dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/mbr.bin of="${loop_devic
 
 # Unattach the loop device
 losetup -d ${loop_device}
+printf "${imgfile} detached from ${loop_device}\n"
 
 # Done - we should be able to push that onto a usb stick and boot from it

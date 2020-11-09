@@ -124,7 +124,7 @@ if [ -d "${tmfimg}.dump" ] ; then
         rm -vf "${tmfimg}"
         rm -vf "${tmfimg}.zip"
         rm -vf "${thumbimg}"
-        rm -vf "${thumbimg}.zip"
+      ( img=`basename "${thumbimg}" .img` ; rm -vf "${img}.zip" )
     else
         printf "Directory \"${tmfimg}.dump\" exists.  Try again using the -f/--force commandline option.\n"
         exit 1
@@ -212,7 +212,7 @@ fi
 # TODO mkthumbdrive should take an option for the mount path (and use a TMP dir if not supplied)
 # Make the flash drive image, if needed
 if [ $build_thumb -eq 1 ] ; then
-    [ -f "${cachepath}/tmf-hudl-thumb-drive.img" ] || ./thumbdrive/mkthumbdrive.sh thumbdrive "${cachepath}" "${mnt}" || exit 1;
+    [ -f "${cachepath}/tmf-hudl-thumb-drive.img" ] || ./thumbdrive/mkthumbdrive.sh "-m=${mnt}" thumbdrive "${cachepath}" || exit 1;
 
     # Make a copy of the thumbdrive amd push the image parts and flash program into it
     cp -v "${cachepath}/tmf-hudl-thumb-drive.img" "${thumbimg}"
@@ -220,7 +220,6 @@ if [ $build_thumb -eq 1 ] ; then
     # mount the thumbdrive image so we can modify it
     loop_device=`losetup --show -f "${thumbimg}"`
     printf "${thumbimg} attached to device ${loop_device}\n"
-    lsblk # FIXME remove once we find out why this is failing
     mount -v "${loop_device}p1" "${mnt}"
 
     # Copy compressed partition images to the thumbdrive
@@ -236,6 +235,7 @@ if [ $build_thumb -eq 1 ] ; then
     # unmount the thumbdrive image and remove our mount point
     umount -v $mnt
     losetup -d ${loop_device}
+    printf "${thumbimg} detached from device ${loop_device}\n"
 
     # zip up the thumbdrive img file
     if [ $compress -eq 1 ] ; then
