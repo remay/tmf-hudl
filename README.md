@@ -20,5 +20,5 @@ For more details please read:
 - If all you want is to download and install the TMF Custom ROM, then head to the
 [Wiki](https://github.com/remay/tmf-hudl/wiki) and find eveything you
 need there.
--[Tools and environment for building](https://github.com/remay/tmf-hudl/wiki/Tools-and-Environment-for-building-TMF-Custom-ROM)
+- [Tools and environment for building](https://github.com/remay/tmf-hudl/wiki/Tools-and-Environment-for-building-TMF-Custom-ROM)
 
