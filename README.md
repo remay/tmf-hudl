@@ -24,3 +24,8 @@ For more details please read:
 need there.
 - [Tools and environment for building](https://github.com/remay/tmf-hudl/wiki/Tools-and-Environment-for-building-TMF-Custom-ROM)
 
+# Credits
+
+Thanks to everyone at XDA and FreakTab whose past work enabled me to pull all this together.
+If I understand correctly the modified SystemUI.apk was originally created by [Paul O'Brien](https://twitter.com/paulobrien) (of [MoDaCo](https://modaco.com/) fame).  Thank you to him for that.
+
