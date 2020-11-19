@@ -15,6 +15,8 @@ This repo hosts the information and tools to build and flash a custom ROM
 (firmware) for a Hudl 1 device that elimminate this problem, as well as removing
 some of the Tesco customisations.
 
+[![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/T6T62Q3TS)
+
 For more details please read:
 
 - If all you want is to download and install the TMF Custom ROM, then head to the
